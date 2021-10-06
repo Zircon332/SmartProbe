@@ -1,25 +1,99 @@
 import socket
 from threading import Thread
 
+class Buffer():
+    def __init__(self):
+        self._data = ""
+
+    def append(self, msg):
+        self._data += msg
+
+    def process(self):
+        latest = None
+
+        # Retrieve latest piece of data
+        while True:
+            data = self._extract()
+
+            if not data:
+                break
+
+            latest = data
+
+        if latest:
+            moisture, temperature = self._convert(latest)
+        else:
+            moisture = temperature = None
+
+        return moisture, temperature
+
+    def clear(self):
+        self._data = ""
+
+    def _extract(self):
+        i = self._data.find("\r\n")
+
+        # Complete piece of data does not exist
+        if i == -1:
+            return None
+
+        # Retrieve first complete piece
+        data = self._data[:i]
+
+        # Cut away extracted piece so it does not appear in future extractions
+        self._data = self._data[i+2:]
+
+        return data
+
+    def _convert(self, data):
+        moisture = temperature = None
+        values = data.split("|")
+
+        for v in values:
+            identifier = v[0]
+
+            if identifier == "M":
+                moisture = int(v[1:])
+
+            elif identifier == "T":
+                temperature = float(v[1:])
+
+        return moisture, temperature
+
 class ThreadedClient(Thread):
     def __init__(self, socket, addr):
         self._addr = addr
-        self._buffer = ""
+        self._buffer = Buffer()
         self._socket = socket
+        self._stop_flag = False
 
         Thread.__init__(self)
 
     def run(self):
         while True:
-            msg = self._socket.recv(1024)
-
-            if msg == b"":
-                print(f"Client closed at {self._addr}")
+            if self._stop_flag:
                 break
 
-            print(self._addr, ">>", msg)
+            msg = self._socket.recv(1024)
 
-            self._socket.send(msg)
+            # Closing clients send 0 bytes
+            if msg == b"":
+                print(f"Client closed at {self._addr}.")
+                self.stop()
+                break
+
+            # Append data to buffer, in case of split data
+            self._buffer.append(msg.decode())
+
+            moisture, temperature = self._buffer.process()
+
+            print("Moisture:", moisture)
+            print("Temperature:", temperature)
+            print("")
+
+    def stop(self):
+        self._socket.close()
+        self._stop_flag = True
 
 def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,13 +101,23 @@ def main():
     server.bind(("", 12345))
     server.listen(5) # Listen to X number of clients
 
-    while True:
-        print("Waiting for clients...")
-        client, addr = server.accept()
+    threads = []
 
-        print(f"Client detected at {addr}, starting separate thread...")
-        thread = ThreadedClient(client, addr)
-        thread.start()
+    try:
+        while True:
+            print("Waiting for clients...")
+            client, addr = server.accept()
+
+            print(f"Client detected at {addr}, starting separate thread...")
+            thread = ThreadedClient(client, addr)
+            thread.start()
+
+            threads.append(thread)
+
+    except KeyboardInterrupt:
+        for t in threads:
+            t.stop()
+            t.join()
         
 
 

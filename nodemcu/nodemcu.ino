@@ -18,6 +18,8 @@ WiFiClient client;
 OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
 
+const char* DELIMITER = "|";
+
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
   WiFi.mode(WIFI_STA);
@@ -56,23 +58,30 @@ void loop() {
   // Read sensor values
   int moisture = analogRead(MOISTURE_PIN);
   sensorTemperature.requestTemperatures();
+  float temperature = sensorTemperature.getTempCByIndex(0);
   
   Serial.print("Moisture: ");
   Serial.println(moisture);
 
   Serial.print("Temperature: ");
-  Serial.println(sensorTemperature.getTempCByIndex(0));
+  Serial.println(temperature);
   
-//  if (WiFi.status() == WL_CONNECTED && client.connected()) {
-//    //Do something
-//    Serial.println("Connected");
-//  } else if (WiFi.status() != WL_CONNECTED) {
-//    // (Re)Connect to WiFi network
-//    connectToWiFi();
-//  } else if (!client.connected()) {
-//    // (Re)Connect to server
-//    client.stop();
-//    connectToServer();
-//    delay(1000);
-//  }
+  if (WiFi.status() == WL_CONNECTED && client.connected()) {
+    // Send data in the format of "M123|T12.34\n"
+    client.print("M");
+    client.print(moisture);
+    client.print(DELIMITER);
+    client.print("T");
+    client.print(temperature);
+    client.println("");
+    
+  } else if (WiFi.status() != WL_CONNECTED) {
+    // (Re)Connect to WiFi network
+    connectToWiFi();
+  } else if (!client.connected()) {
+    // (Re)Connect to server
+    client.stop();
+    connectToServer();
+    delay(1000);
+  }
 }
