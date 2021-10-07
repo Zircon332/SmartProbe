@@ -11,6 +11,7 @@
 #define WIFI_TIMEOUT_MS 20000
 #define MOISTURE_PIN 4
 #define TEMPERATURE_PIN 2
+#define SPRAYER_PIN 5
 
 IPAddress server(address[0], address[1], address[2], address[3]);
 WiFiClient client;
@@ -51,7 +52,9 @@ void setup() {
   Serial.begin(9600);
 
   pinMode(MOISTURE_PIN, INPUT);
+  pinMode(SPRAYER_PIN, OUTPUT);
   sensorTemperature.begin();
+  digitalWrite(SPRAYER_PIN,HIGH);
 }
 
 void loop() {
@@ -59,6 +62,7 @@ void loop() {
   int moisture = analogRead(MOISTURE_PIN);
   sensorTemperature.requestTemperatures();
   float temperature = sensorTemperature.getTempCByIndex(0);
+  
   
   Serial.print("Moisture: ");
   Serial.println(moisture);
