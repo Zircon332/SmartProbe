@@ -6,19 +6,45 @@
 #include <stdlib.h>
 #include <WiFi.h>
 
+#include "BMP.h"
 #include "Config.h"
+#include "OV7670.h"
 
 #define WIFI_TIMEOUT_MS 20000
+
 #define MOISTURE_PIN 4
 #define TEMPERATURE_PIN 2
+
+// Camera pins
+// ---===---
+#define SIOD 21
+#define SIOC 22
+
+#define VSYNC 34
+#define HREF 35
+
+#define XCLK 32
+#define PCLK 33
+
+#define D0 27
+#define D1 17
+#define D2 16
+#define D3 15
+#define D4 14
+#define D5 13
+#define D6 12
+#define D7 4
+// ---===---
 
 IPAddress server(address[0], address[1], address[2], address[3]);
 WiFiClient client;
 
 OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
+OV7670* camera;
 
 const char* DELIMITER = "|";
+unsigned char bmpHeader[BMP::headerSize];
 
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
@@ -52,13 +78,19 @@ void setup() {
 
   pinMode(MOISTURE_PIN, INPUT);
   sensorTemperature.begin();
+
+  camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
+  BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
 }
 
 void loop() {
   // Read sensor values
   int moisture = analogRead(MOISTURE_PIN);
+  
   sensorTemperature.requestTemperatures();
   float temperature = sensorTemperature.getTempCByIndex(0);
+
+  camera->oneFrame();
   
   Serial.print("Moisture: ");
   Serial.println(moisture);
@@ -68,12 +100,15 @@ void loop() {
   
   if (WiFi.status() == WL_CONNECTED && client.connected()) {
     // Send data in the format of "M123|T12.34\n"
-    client.print("M");
-    client.print(moisture);
-    client.print(DELIMITER);
-    client.print("T");
-    client.print(temperature);
-    client.println("");
+//    client.print("M");
+//    client.print(moisture);
+//    client.print(DELIMITER);
+//    client.print("T");
+//    client.print(temperature);
+//    client.println("");
+
+    client.write(reinterpret_cast<const char*>(bmpHeader));
+    client.write(reinterpret_cast<const char*>(camera->frame));
     
   } else if (WiFi.status() != WL_CONNECTED) {
     // (Re)Connect to WiFi network
@@ -84,4 +119,6 @@ void loop() {
     connectToServer();
     delay(1000);
   }
+
+  delay(10000);
 }

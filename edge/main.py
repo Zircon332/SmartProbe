@@ -82,14 +82,16 @@ class ThreadedClient(Thread):
                 self.stop()
                 break
 
+            print(msg)
+
             # Append data to buffer, in case of split data
-            self._buffer.append(msg.decode())
+            # self._buffer.append(msg.decode())
 
-            moisture, temperature = self._buffer.process()
+            # moisture, temperature = self._buffer.process()
 
-            print("Moisture:", moisture)
-            print("Temperature:", temperature)
-            print("")
+            # print("Moisture:", moisture)
+            # print("Temperature:", temperature)
+            # print("")
 
     def stop(self):
         self._socket.close()
