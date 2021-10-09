@@ -12,6 +12,7 @@
 #define MOISTURE_PIN 4
 #define TEMPERATURE_PIN 2
 #define SPRAYER_PIN 5
+#define SPRINKLER_PIN 18
 
 IPAddress server(address[0], address[1], address[2], address[3]);
 WiFiClient client;
@@ -53,6 +54,7 @@ void setup() {
 
   pinMode(MOISTURE_PIN, INPUT);
   pinMode(SPRAYER_PIN, OUTPUT);
+  pinMode(SPRINKLER_PIN,OUTPUT);
   sensorTemperature.begin();
   digitalWrite(SPRAYER_PIN,HIGH);
 }
@@ -71,6 +73,26 @@ void loop() {
   Serial.println(temperature);
   
   if (WiFi.status() == WL_CONNECTED && client.connected()) {
+    if (client.available() >= 2 ){
+      uint8_t cmd[2] = {0};
+      //Serial.println("Client available");
+      client.read(cmd,2);
+      String str = (char*)cmd;
+      Serial.println(str);
+
+      int pin = SPRINKLER_PIN;
+      if (str.charAt(0) == 'P'){
+        pin = SPRAYER_PIN;
+      }
+
+      if(str.charAt(1) == '0'){
+        digitalWrite(pin,LOW);
+      }else{
+        digitalWrite(pin,HIGH);
+      }
+    }
+    
+    //print(cmd);
     // Send data in the format of "M123|T12.34\n"
     client.print("M");
     client.print(moisture);
