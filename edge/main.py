@@ -90,6 +90,17 @@ class ThreadedClient(Thread):
             print("Moisture:", moisture)
             print("Temperature:", temperature)
             print("")
+            
+    
+    def send(self,msg):
+        encoded_msg = msg.encode()
+        print("sending message");
+        try:
+            self._socket.sendall(encoded_msg)
+        except socket.error: #Connection closed
+            print("Error occured while writing to client.")
+        except Exception as e:
+            print(e)
 
     def stop(self):
         self._socket.close()
@@ -111,6 +122,8 @@ def main():
             print(f"Client detected at {addr}, starting separate thread...")
             thread = ThreadedClient(client, addr)
             thread.start()
+            
+            thread.send("P0") # W0 = Water Sprinkler OFF
 
             threads.append(thread)
 
@@ -118,8 +131,6 @@ def main():
         for t in threads:
             t.stop()
             t.join()
-        
-
 
 if __name__ == "__main__":
     main()
