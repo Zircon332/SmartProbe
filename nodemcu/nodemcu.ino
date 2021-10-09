@@ -12,8 +12,8 @@
 
 #define WIFI_TIMEOUT_MS 20000
 
-#define MOISTURE_PIN 4
-#define TEMPERATURE_PIN 2
+#define MOISTURE_PIN 39
+#define TEMPERATURE_PIN 23
 
 // Camera pins
 // ---===---
@@ -43,7 +43,7 @@ OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
 OV7670* camera;
 
-const char* DELIMITER = "|";
+const char* DELIMITER = "!#)%@#^#$]";
 unsigned char bmpHeader[BMP::headerSize];
 
 void connectToWiFi() {
@@ -100,15 +100,21 @@ void loop() {
   
   if (WiFi.status() == WL_CONNECTED && client.connected()) {
     // Send data in the format of "M123|T12.34\n"
-//    client.print("M");
-//    client.print(moisture);
-//    client.print(DELIMITER);
-//    client.print("T");
-//    client.print(temperature);
-//    client.println("");
-
-    client.write(reinterpret_cast<const char*>(bmpHeader));
-    client.write(reinterpret_cast<const char*>(camera->frame));
+    client.print("M");
+    client.print(moisture);
+    
+    client.print(DELIMITER);
+    
+    client.print("T");
+    client.print(temperature);
+    
+    client.print(DELIMITER);
+    
+    client.print("C");
+    client.write(bmpHeader, BMP::headerSize);
+    client.write(camera->frame, camera->xres * camera->yres * 2);
+    
+    client.println("");
     
   } else if (WiFi.status() != WL_CONNECTED) {
     // (Re)Connect to WiFi network
