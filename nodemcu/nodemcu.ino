@@ -6,21 +6,48 @@
 #include <stdlib.h>
 #include <WiFi.h>
 
+#include "BMP.h"
 #include "Config.h"
+#include "OV7670.h"
 
 #define WIFI_TIMEOUT_MS 20000
-#define MOISTURE_PIN 4
-#define TEMPERATURE_PIN 2
+
 #define SPRAYER_PIN 5
 #define SPRINKLER_PIN 18
+
+#define MOISTURE_PIN 39
+#define TEMPERATURE_PIN 23
+
+// Camera pins
+// ---===---
+#define SIOD 21
+#define SIOC 22
+
+#define VSYNC 34
+#define HREF 35
+
+#define XCLK 32
+#define PCLK 33
+
+#define D0 27
+#define D1 17
+#define D2 16
+#define D3 15
+#define D4 14
+#define D5 13
+#define D6 12
+#define D7 4
+// ---===---
 
 IPAddress server(address[0], address[1], address[2], address[3]);
 WiFiClient client;
 
 OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
+OV7670* camera;
 
-const char* DELIMITER = "|";
+const char* DELIMITER = "!#)%@#^#$]";
+unsigned char bmpHeader[BMP::headerSize];
 
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
@@ -56,14 +83,21 @@ void setup() {
   pinMode(SPRAYER_PIN, OUTPUT);
   pinMode(SPRINKLER_PIN,OUTPUT);
   sensorTemperature.begin();
+
+  camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
+  BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
+
   digitalWrite(SPRAYER_PIN,HIGH);
 }
 
 void loop() {
   // Read sensor values
   int moisture = analogRead(MOISTURE_PIN);
+  
   sensorTemperature.requestTemperatures();
   float temperature = sensorTemperature.getTempCByIndex(0);
+
+  camera->oneFrame();
   
   
   Serial.print("Moisture: ");
@@ -96,9 +130,18 @@ void loop() {
     // Send data in the format of "M123|T12.34\n"
     client.print("M");
     client.print(moisture);
+    
     client.print(DELIMITER);
+    
     client.print("T");
     client.print(temperature);
+    
+    client.print(DELIMITER);
+    
+    client.print("C");
+    client.write(bmpHeader, BMP::headerSize);
+    client.write(camera->frame, camera->xres * camera->yres * 2);
+    
     client.println("");
     
   } else if (WiFi.status() != WL_CONNECTED) {
@@ -110,4 +153,6 @@ void loop() {
     connectToServer();
     delay(1000);
   }
+
+  delay(10000);
 }

@@ -3,10 +3,10 @@ from threading import Thread
 
 class Buffer():
     def __init__(self):
-        self._data = ""
+        self._data = bytearray()
 
     def append(self, msg):
-        self._data += msg
+        self._data += bytearray(msg)
 
     def process(self):
         latest = None
@@ -15,23 +15,23 @@ class Buffer():
         while True:
             data = self._extract()
 
-            if not data:
+            if data == None:
                 break
 
             latest = data
 
         if latest:
-            moisture, temperature = self._convert(latest)
+            moisture, temperature, image = self._convert(latest)
         else:
-            moisture = temperature = None
+            moisture = temperature = image = None
 
-        return moisture, temperature
+        return moisture, temperature, image
 
     def clear(self):
-        self._data = ""
+        self._data = bytearray()
 
     def _extract(self):
-        i = self._data.find("\r\n")
+        i = self._data.find(b"\r\n")
 
         # Complete piece of data does not exist
         if i == -1:
@@ -46,19 +46,22 @@ class Buffer():
         return data
 
     def _convert(self, data):
-        moisture = temperature = None
-        values = data.split("|")
+        moisture = temperature = image = None
+        values = data.split(b"!#)%@#^#$]")
 
         for v in values:
             identifier = v[0]
 
-            if identifier == "M":
-                moisture = int(v[1:])
+            if identifier == 77: # Letter "M" for moisture
+                moisture = int(v[1:].decode())
 
-            elif identifier == "T":
-                temperature = float(v[1:])
+            elif identifier == 84: # Letter "T" for temperature
+                temperature = float(v[1:].decode())
 
-        return moisture, temperature
+            elif identifier == 67: # Letter "C" for camera
+                image = v[1:]
+
+        return moisture, temperature, image
 
 class ThreadedClient(Thread):
     def __init__(self, socket, addr):
@@ -74,7 +77,7 @@ class ThreadedClient(Thread):
             if self._stop_flag:
                 break
 
-            msg = self._socket.recv(1024)
+            msg = self._socket.recv(4096)
 
             # Closing clients send 0 bytes
             if msg == b"":
@@ -83,15 +86,22 @@ class ThreadedClient(Thread):
                 break
 
             # Append data to buffer, in case of split data
-            self._buffer.append(msg.decode())
+            self._buffer.append(msg)
 
-            moisture, temperature = self._buffer.process()
+            moisture, temperature, image = self._buffer.process()
 
-            print("Moisture:", moisture)
-            print("Temperature:", temperature)
-            print("")
-            
-    
+            if moisture != None:
+                print("Moisture:", moisture)
+
+            if temperature != None:
+                print("Temperature:", temperature)
+
+            if image != None:
+                with open("temp.bmp", "wb") as f:
+                    f.write(image)
+
+                print("Image Written")
+
     def send(self,msg):
         encoded_msg = msg.encode()
         print("sending message");
