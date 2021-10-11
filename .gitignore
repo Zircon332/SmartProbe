@@ -1,3 +1,5 @@
 *.swp
 Config.h
 .env
+__pycache__
+*.bmp
