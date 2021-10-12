@@ -1,5 +1,12 @@
+import awscrt
+import dotenv
+import json
+import os
 import socket
-from threading import Thread
+import threading
+
+import mqtt_handler
+import s3_handler
 
 class Buffer():
     def __init__(self):
@@ -63,14 +70,14 @@ class Buffer():
 
         return moisture, temperature, image
 
-class ThreadedClient(Thread):
+class ThreadedClient(threading.Thread):
     def __init__(self, socket, addr):
         self._addr = addr
         self._buffer = Buffer()
         self._socket = socket
         self._stop_flag = False
 
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
 
     def run(self):
         while True:
@@ -90,17 +97,27 @@ class ThreadedClient(Thread):
 
             moisture, temperature, image = self._buffer.process()
 
-            if moisture != None:
-                print("Moisture:", moisture)
+            if moisture is not None or temperature is not None:
+                body = {
+                    "moisture": moisture,
+                    "temperature": temperature
+                }
 
-            if temperature != None:
-                print("Temperature:", temperature)
+                print(body)
 
-            if image != None:
+                mqtt_connection.publish(
+                    topic="smartprobe/abc/sensors/data",
+                    payload=json.dumps(body),
+                    qos=awscrt.mqtt.QoS.AT_LEAST_ONCE
+                    )
+
+            if image is not None:
                 with open("temp.bmp", "wb") as f:
                     f.write(image)
 
-                print("Image Written")
+                print("Uploading image...")
+                s3_handler.upload(image, "temp.bmp")
+                print("Uploaded.")
 
     def send(self,msg):
         encoded_msg = msg.encode()
@@ -138,9 +155,20 @@ def main():
             threads.append(thread)
 
     except KeyboardInterrupt:
-        for t in threads:
+        print("Stopping threads...")
+        for index, t in enumerate(threads):
             t.stop()
             t.join()
+            print(f"\tStopped thread {index}.")
+        print("Stopped all threads.")
+
+        print("Disconnecting MQTT connection...")
+        disconnect_future = mqtt_connection.disconnect()
+        disconnect_future.result()
+        print("Disconnected.")
 
 if __name__ == "__main__":
+    dotenv.load_dotenv()
+    mqtt_connection = mqtt_handler.begin()
+
     main()
