@@ -114,15 +114,22 @@ void loop() {
       String str = (char*)cmd;
       Serial.println(str);
 
-      int pin = SPRINKLER_PIN;
-      if (str.charAt(0) == 'P'){
-        pin = SPRAYER_PIN;
+      // Water Sprinkler (Pump)
+      if (str.charAt(0) == 'W'){
+        if(str.charAt(1) == '0'){
+          digitalWrite(SPRINKLER_PIN,LOW);
+        }else{
+          digitalWrite(SPRINKLER_PIN,HIGH);
+        }
       }
-
-      if(str.charAt(1) == '0'){
-        digitalWrite(pin,LOW);
-      }else{
-        digitalWrite(pin,HIGH);
+      
+      // Pest Spray (Servo)
+      if (str.charAt(0) == 'P'){
+        if(str.charAt(1) == '0'){
+          pestServo.write(0);
+        }else{
+          pestServo.write(180);
+        }
       }
     }
     
