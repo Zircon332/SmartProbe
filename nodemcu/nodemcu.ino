@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <WiFi.h>
+#include <ESP32Servo.h>
 
 #include "BMP.h"
 #include "Config.h"
@@ -46,6 +47,8 @@ OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
 OV7670* camera;
 
+Servo pestServo;
+
 const char* DELIMITER = "!#)%@#^#$]";
 unsigned char bmpHeader[BMP::headerSize];
 
@@ -86,6 +89,9 @@ void setup() {
 
   camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
   BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
+
+  pestServo.setPeriodHertz(50);
+  pestServo.attach(SPRAYER_PIN, 500, 2400);
 
   digitalWrite(SPRAYER_PIN,HIGH);
 }
