@@ -83,6 +83,7 @@ void setup() {
   pinMode(SPRAYER_PIN, OUTPUT);
   pinMode(SPRINKLER_PIN,OUTPUT);
   sensorTemperature.begin();
+  sensorTemperature.setResolution(12);
 
   camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
   BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
