@@ -7,17 +7,20 @@
 #include <WiFi.h>
 #include <ESP32Servo.h>
 
+#include "esp32-hal-ledc.h"
 #include "BMP.h"
 #include "Config.h"
 #include "OV7670.h"
 
 #define WIFI_TIMEOUT_MS 20000
 
-#define SPRAYER_PIN 5
-#define SPRINKLER_PIN 18
+#define SPRAYER_PIN 18
+#define SPRINKLER_PIN 5
 
 #define MOISTURE_PIN 39
 #define TEMPERATURE_PIN 23
+
+#define TIMER_WIDTH 16
 
 // Camera pins
 // ---===---
@@ -47,7 +50,7 @@ OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
 OV7670* camera;
 
-Servo pestServo;
+//Servo pestServo;
 
 const char* DELIMITER = "!#)%@#^#$]";
 unsigned char bmpHeader[BMP::headerSize];
@@ -81,31 +84,39 @@ void connectToServer() {
 
 void setup() {
   Serial.begin(9600);
-
+  Serial.println("Setting up pins");
   pinMode(MOISTURE_PIN, INPUT);
   pinMode(SPRAYER_PIN, OUTPUT);
   pinMode(SPRINKLER_PIN,OUTPUT);
   sensorTemperature.begin();
   sensorTemperature.setResolution(12);
-
+  Serial.println("Initialize camra");
   camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
   BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
+  Serial.println("Initialize servo");
 
-  pestServo.setPeriodHertz(50);
-  pestServo.attach(SPRAYER_PIN, 500, 2400);
-
-  digitalWrite(SPRAYER_PIN,HIGH);
+//  pestServo.setPeriodHertz(330);
+//  pestServo.attach(SPRAYER_PIN, 500, 2400);
+  ledcSetup(4,50,TIMER_WIDTH);
+  ledcAttachPin(SPRAYER_PIN,4);
+  
 }
 
 void loop() {
   // Read sensor values
+  Serial.println("Read Moisture value");
   int moisture = analogRead(MOISTURE_PIN);
-  
+  Serial.println("Read sensor value");
   sensorTemperature.requestTemperatures();
   float temperature = sensorTemperature.getTempCByIndex(0);
-
+  Serial.println("Capturing image");
   camera->oneFrame();
-  
+  Serial.println("Captured image");
+
+  Serial.println("Activated Sprayer");
+//  pestServo.write(180);
+//  ledcWrite(4,7864);
+  Serial.println("Finished Sprayer");
   
   Serial.print("Moisture: ");
   Serial.println(moisture);
@@ -133,9 +144,9 @@ void loop() {
       // Pest Spray (Servo)
       if (str.charAt(0) == 'P'){
         if(str.charAt(1) == '0'){
-          pestServo.write(0);
+          ledcWrite(4,1638);
         }else{
-          pestServo.write(180);
+          ledcWrite(4,7864);
         }
       }
     }
