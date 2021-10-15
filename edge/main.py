@@ -119,9 +119,10 @@ class ThreadedClient(threading.Thread):
                 s3_handler.upload(image, "temp.bmp")
                 print("Uploaded.")
 
-    def send(self,msg):
+    def send(self, msg):
+        print("Sending message...")
         encoded_msg = msg.encode()
-        print("sending message");
+
         try:
             self._socket.sendall(encoded_msg)
         except socket.error: #Connection closed
@@ -149,8 +150,6 @@ def main():
             print(f"Client detected at {addr}, starting separate thread...")
             thread = ThreadedClient(client, addr)
             thread.start()
-            
-            thread.send("P0") # W0 = Water Sprinkler OFF
 
             threads.append(thread)
 
