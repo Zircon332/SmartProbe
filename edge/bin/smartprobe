@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BINPATH=`dirname $0`
+
+cd "${BINPATH}/.."
+ROOT=$(pwd)
+
+export "PYTHONPATH=$PYTHONPATH:$ROOT"
+
+python3 "$ROOT/smartprobe/main.py" $@
