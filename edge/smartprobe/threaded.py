@@ -3,7 +3,7 @@ import json
 import socket
 import threading
 
-from smartprobe import s3_handler
+from smartprobe import s3_handler, actuator
 
 class ThreadedClient(threading.Thread):
     def __init__(self, socket, addr, mqtt_conn):
@@ -33,6 +33,9 @@ class ThreadedClient(threading.Thread):
 
             moisture, temperature, image = self._buffer.process()
 
+            sprayer = sprinkler = None
+
+            # Upload data to cloud
             if moisture is not None or temperature is not None:
                 body = {
                     "moisture": moisture,
@@ -47,15 +50,46 @@ class ThreadedClient(threading.Thread):
                     qos=mqtt.QoS.AT_LEAST_ONCE
                     )
 
+                # Actuation
+                sprinkler = actuator.generate_sprinkler_output(moisture)
+
             if image is not None:
                 with open("temp.bmp", "wb") as f:
                     f.write(image)
 
                 print("Uploading image...")
-                s3_handler.upload(image, "temp.bmp")
+                # s3_handler.upload(image, "temp.bmp")
                 print("Uploaded.")
 
-    def send(self, msg):
+                # Actuation
+                sprayer = actuator.generate_sprayer_output(image)
+
+            if sprinkler is not None or sprayer is not None:
+                if sprinkler is not None:
+                    self._send(sprinkler)
+
+                if sprayer is not None:
+                    self._send(sprayer)
+
+                body = {
+                    "sprinkler": sprinkler,
+                    "sprayer": sprayer
+                }
+
+                print(body)
+
+                self._mqtt_conn.publish(
+                    topic="smartprobe/abc/actions",
+                    payload=json.dumps(body),
+                    qos=mqtt.QoS.AT_LEAST_ONCE
+                    )
+
+    def stop(self):
+        self._socket.shutdown(socket.SHUT_RDWR)
+        self._socket.close()
+        self._stop_flag = True
+
+    def _send(self, msg):
         print("Sending message...")
         encoded_msg = msg.encode()
 
@@ -65,11 +99,6 @@ class ThreadedClient(threading.Thread):
             print("Error occured while writing to client.")
         except Exception as e:
             print(e)
-
-    def stop(self):
-        self._socket.shutdown()
-        self._socket.close()
-        self._stop_flag = True
 
 class Buffer():
     def __init__(self):
