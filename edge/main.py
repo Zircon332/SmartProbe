@@ -133,7 +133,7 @@ def main():
             thread = ThreadedClient(client, addr)
             thread.start()
             
-            thread.send("P0") # W0 = Water Sprinkler OFF
+            thread.send("W1") # W0 = Water Sprinkler OFF
 
             threads.append(thread)
 
