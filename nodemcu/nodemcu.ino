@@ -6,17 +6,20 @@
 #include <stdlib.h>
 #include <WiFi.h>
 
+#include "esp32-hal-ledc.h"
 #include "BMP.h"
 #include "Config.h"
 #include "OV7670.h"
 
 #define WIFI_TIMEOUT_MS 20000
 
-#define SPRAYER_PIN 5
-#define SPRINKLER_PIN 18
+#define SPRAYER_PIN 18
+#define SPRINKLER_PIN 5
 
 #define MOISTURE_PIN 39
 #define TEMPERATURE_PIN 23
+
+#define TIMER_WIDTH 16
 
 // Camera pins
 // ---===---
@@ -78,27 +81,28 @@ void connectToServer() {
 
 void setup() {
   Serial.begin(9600);
-
+  
   pinMode(MOISTURE_PIN, INPUT);
   pinMode(SPRAYER_PIN, OUTPUT);
   pinMode(SPRINKLER_PIN,OUTPUT);
+  
   sensorTemperature.begin();
-
+  sensorTemperature.setResolution(12);
+  
   camera = new OV7670(OV7670::Mode::QQVGA_RGB565, SIOD, SIOC, VSYNC, HREF, XCLK, PCLK, D0, D1, D2, D3, D4, D5, D6, D7);
   BMP::construct16BitHeader(bmpHeader, camera->xres, camera->yres);
-
-  digitalWrite(SPRAYER_PIN,HIGH);
+  
+  ledcSetup(4,50,TIMER_WIDTH);
+  ledcAttachPin(SPRAYER_PIN,4);
 }
 
 void loop() {
   // Read sensor values
   int moisture = analogRead(MOISTURE_PIN);
-  
   sensorTemperature.requestTemperatures();
   float temperature = sensorTemperature.getTempCByIndex(0);
-
-  camera->oneFrame();
   
+  camera->oneFrame();
   
   Serial.print("Moisture: ");
   Serial.println(moisture);
@@ -114,15 +118,22 @@ void loop() {
       String str = (char*)cmd;
       Serial.println(str);
 
-      int pin = SPRINKLER_PIN;
-      if (str.charAt(0) == 'P'){
-        pin = SPRAYER_PIN;
+      // Water Sprinkler (Pump)
+      if (str.charAt(0) == 'W'){
+        if(str.charAt(1) == '0'){
+          digitalWrite(SPRINKLER_PIN,LOW);
+        }else{
+          digitalWrite(SPRINKLER_PIN,HIGH);
+        }
       }
-
-      if(str.charAt(1) == '0'){
-        digitalWrite(pin,LOW);
-      }else{
-        digitalWrite(pin,HIGH);
+      
+      // Pest Spray (Servo)
+      if (str.charAt(0) == 'P'){
+        if(str.charAt(1) == '0'){
+          ledcWrite(4,1638);
+        }else{
+          ledcWrite(4,7864);
+        }
       }
     }
     
@@ -154,5 +165,5 @@ void loop() {
     delay(1000);
   }
 
-  delay(10000);
+  delay(3000);
 }
