@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <DallasTemperature.h>
+#include <Preferences.h>
 #include <OneWire.h>
 #include <SPI.h>
 #include <stdio.h>
@@ -49,8 +50,11 @@ OneWire oneWire(TEMPERATURE_PIN);
 DallasTemperature sensorTemperature(&oneWire);
 OV7670* camera;
 
+Preferences preferences;
+
 const char* DELIMITER = "!#)%@#^#$]";
 unsigned char bmpHeader[BMP::headerSize];
+String id;
 
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
@@ -94,6 +98,15 @@ void setup() {
   
   ledcSetup(4,50,TIMER_WIDTH);
   ledcAttachPin(SPRAYER_PIN,4);
+
+  preferences.begin("probe", false);
+  preferences.clear();
+  preferences.end();
+
+  // Read ID from non-volatile memory
+  preferences.begin("probe", true); // true = Read-only mode
+  id = preferences.getString("id", "None"); // Default to "None" string
+  preferences.end();
 }
 
 void loop() {
@@ -103,6 +116,9 @@ void loop() {
   float temperature = sensorTemperature.getTempCByIndex(0);
   
   camera->oneFrame();
+
+  Serial.print("ID: ");
+  Serial.println(id);
   
   Serial.print("Moisture: ");
   Serial.println(moisture);
@@ -110,35 +126,13 @@ void loop() {
   Serial.print("Temperature: ");
   Serial.println(temperature);
   
-  if (WiFi.status() == WL_CONNECTED && client.connected()) {
-    if (client.available() >= 2 ){
-      uint8_t cmd[2] = {0};
-      //Serial.println("Client available");
-      client.read(cmd,2);
-      String str = (char*)cmd;
-      Serial.println(str);
-
-      // Water Sprinkler (Pump)
-      if (str.charAt(0) == 'W'){
-        if(str.charAt(1) == '0'){
-          digitalWrite(SPRINKLER_PIN,LOW);
-        }else{
-          digitalWrite(SPRINKLER_PIN,HIGH);
-        }
-      }
-      
-      // Pest Spray (Servo)
-      if (str.charAt(0) == 'P'){
-        if(str.charAt(1) == '0'){
-          ledcWrite(4,1638);
-        }else{
-          ledcWrite(4,7864);
-        }
-      }
-    }
-    
-    //print(cmd);
+  if (WiFi.status() == WL_CONNECTED && client.connected()) {   
     // Send data in the format of "M123|T12.34\n"
+    client.print("I");
+    client.print(id);
+
+    client.print(DELIMITER);
+    
     client.print("M");
     client.print(moisture);
     
@@ -154,10 +148,53 @@ void loop() {
     client.write(camera->frame, camera->xres * camera->yres * 2);
     
     client.println("");
-    
+
+    delay(1000); // Wait a little bit for response
+
+    while (client.available()) { // Loop through everything before next iteration
+      uint8_t identifier[1] = {0};
+      client.read(identifier, 1);
+
+      if (identifier[0] == 73) { // 73 = "I", ID
+        uint8_t new_id[37] = {0};
+        client.read(new_id, 36);
+        Serial.print("Saving new ID: ");
+        Serial.println((char *) new_id);
+
+        id = String((char *) new_id);
+
+        preferences.begin("probe", false); // false = Read-Write mode
+        preferences.putString("id", id); // Save ID
+        preferences.end();
+      } else if (identifier[0] == 80) { // 80 = "P", Pest spray
+        uint8_t cmd[1] = {0};
+        client.read(cmd, 1);
+
+        if (cmd[0] == 48) { // 48 = "0"
+          Serial.println("P0");
+          ledcWrite(4,1638);
+        } else if (cmd[0] == 49) { // 49 = "1"
+          Serial.println("P1");
+          ledcWrite(4,7864);
+        }
+        
+      } else if (identifier[0] == 87) { // 87 = "W", Water sprinkler
+        uint8_t cmd[1] = {0};
+        client.read(cmd, 1);
+
+        if (cmd[0] == 48) { // 48 = "0"
+          Serial.println("W0");
+          digitalWrite(SPRINKLER_PIN, LOW);
+        } else if (cmd[0] == 49) { // 49 = "1"
+          Serial.println("W1");
+          digitalWrite(SPRINKLER_PIN, HIGH);
+        }
+      }
+    }
   } else if (WiFi.status() != WL_CONNECTED) {
     // (Re)Connect to WiFi network
     connectToWiFi();
+    
   } else if (!client.connected()) {
     // (Re)Connect to server
     client.stop();
