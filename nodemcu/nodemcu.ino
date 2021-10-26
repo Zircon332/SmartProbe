@@ -99,9 +99,10 @@ void setup() {
   ledcSetup(4,50,TIMER_WIDTH);
   ledcAttachPin(SPRAYER_PIN,4);
 
-  preferences.begin("probe", false);
-  preferences.clear();
-  preferences.end();
+  // Uncomment the following block if you want to clear the non-volatile memory
+//  preferences.begin("probe", false);
+//  preferences.clear();
+//  preferences.end();
 
   // Read ID from non-volatile memory
   preferences.begin("probe", true); // true = Read-only mode

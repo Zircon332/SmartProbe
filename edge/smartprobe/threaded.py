@@ -35,41 +35,12 @@ class ThreadedClient(threading.Thread):
             sprayer = sprinkler = None
             node_id, moisture, temperature, image = self._buffer.process()
 
-            if node_id == "None":
-                # Generate unique ID
-                # self._node_id = uuid.uuid4()
-                self._send("I" + str(uuid.uuid4()))
+            # Generate and send actuator output
+            if moisture is not None and temperature is not None:
+                sprinkler = actuator.generate_sprinkler_output(moisture, temperature)
 
-            elif node_id is not None:
-                # Upload data to cloud
-                if moisture is not None or temperature is not None:
-                    body = {
-                        "moisture": moisture,
-                        "temperature": temperature
-                    }
-
-                    print(node_id)
-                    print(body)
-
-                    # self._mqtt_conn.publish(
-                        # topic="smartprobe/abc/sensors/data",
-                        # payload=json.dumps(body),
-                        # qos=mqtt.QoS.AT_LEAST_ONCE
-                        # )
-
-                    # Actuation
-                    sprinkler = actuator.generate_sprinkler_output(moisture)
-
-                if image is not None:
-                    # with open("temp.bmp", "wb") as f:
-                        # f.write(image)
-
-                    print("Uploading image...")
-                    # s3_handler.upload(image, "temp.bmp")
-                    print("Uploaded.")
-
-                    # Actuation
-                    sprayer = actuator.generate_sprayer_output(image)
+            if image is not None:
+                sprayer = actuator.generate_sprayer_output(image)
 
             if sprinkler is not None:
                 self._send(sprinkler)
@@ -77,20 +48,61 @@ class ThreadedClient(threading.Thread):
             if sprayer is not None:
                 self._send(sprayer)
 
-            if sprinkler is not None or sprayer is not None:
+            # Generate new node_id and save in cloud
+            if node_id == "None":
+                # Generate unique ID
+                new_id = str(uuid.uuid4())
+                self._send("I" + new_id)
 
-                body = {
-                    "sprinkler": sprinkler,
-                    "sprayer": sprayer
-                }
+                self._mqtt_conn.publish(
+                    topic="smartprobe/id",
+                    payload=json.dumps({ "id": new_id }),
+                    qos=mqtt.QoS.AT_LEAST_ONCE
+                    )
 
-                print(body)
+            # Upload data to cloud if node_id exists
+            elif node_id is not None:
+                print(node_id)
 
-                # self._mqtt_conn.publish(
-                    # topic="smartprobe/abc/actions",
-                    # payload=json.dumps(body),
-                    # qos=mqtt.QoS.AT_LEAST_ONCE
-                    # )
+                # Upload data to cloud
+                if moisture is not None or temperature is not None:
+                    body = {
+                        "moisture": moisture,
+                        "temperature": temperature
+                    }
+
+                    print(body)
+
+                    self._mqtt_conn.publish(
+                        topic="smartprobe/{}/sensors/data".format(node_id),
+                        payload=json.dumps(body),
+                        qos=mqtt.QoS.AT_LEAST_ONCE
+                        )
+
+                if image is not None:
+                    filename = "{}.bmp".format(node_id)
+
+                    print("Uploading image...")
+                    s3_handler.upload(image, filename)
+                    print("Uploaded.")
+
+                    # Save into local file for checking
+                    with open("temp.bmp", "wb") as f:
+                        f.write(image)
+
+                if sprinkler is not None or sprayer is not None:
+                    body = {
+                        "sprinkler": sprinkler,
+                        "sprayer": sprayer
+                    }
+
+                    print(body)
+
+                    self._mqtt_conn.publish(
+                        topic="smartprobe/{}/actions".format(node_id),
+                        payload=json.dumps(body),
+                        qos=mqtt.QoS.AT_LEAST_ONCE
+                        )
 
     def stop(self):
         self._socket.shutdown(socket.SHUT_RDWR)

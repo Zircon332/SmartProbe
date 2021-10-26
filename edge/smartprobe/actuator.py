@@ -5,7 +5,7 @@ import random
 # 0 - off
 # 1 - on
 
-def generate_sprinkler_output(moisture):
+def generate_sprinkler_output(moisture, temperature):
     if moisture < 3000:
         return "W1"
     else:
