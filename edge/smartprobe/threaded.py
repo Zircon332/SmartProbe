@@ -48,17 +48,11 @@ class ThreadedClient(threading.Thread):
             if sprayer is not None:
                 self._send(sprayer)
 
-            # Generate new node_id and save in cloud
+            # Generate new node_id and send to MCU
             if node_id == "None":
                 # Generate unique ID
                 new_id = str(uuid.uuid4())
                 self._send("I" + new_id)
-
-                self._mqtt_conn.publish(
-                    topic="smartprobe/id",
-                    payload=json.dumps({ "id": new_id }),
-                    qos=mqtt.QoS.AT_LEAST_ONCE
-                    )
 
             # Upload data to cloud if node_id exists
             elif node_id is not None:
