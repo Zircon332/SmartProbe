@@ -1,8 +1,8 @@
 import boto3
 from boto3.dynamodb.conditions import Key
-import functools
-
 from flask import abort, Blueprint, jsonify, render_template, redirect, url_for
+import functools
+import json
 
 bp = Blueprint("api", __name__, url_prefix="/api/node")
 
@@ -12,6 +12,11 @@ def get_nodes():
 
     # Retrieve all items in "nodes" table
     res = table_nodes.scan()
+
+    # Deserialize because values are saved as string in DynamoDB for some reason
+    for item in res["Items"]:
+        item["sensors"] = json.loads(item["sensors"])
+        item["actions"] = json.loads(item["actions"])
 
     return jsonify(res["Items"])
 
@@ -24,7 +29,12 @@ def get_node(node_id):
     if "Item" not in res:
         abort(404)
 
-    return res["Item"]
+    # Deserialize because values are saved as string in DynamoDB for some reason
+    item = res["Item"]
+    item["sensors"] = json.loads(item["sensors"])
+    item["actions"] = json.loads(item["actions"])
+
+    return item
 
 @bp.route("/<node_id>/data")
 def get_node_data(node_id):
