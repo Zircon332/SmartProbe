@@ -1,5 +1,104 @@
 {% extends 'base.html' %}
 
 {% block main %}
-<p>Hello Node!</p>
+<div class="border-bottom mb-3">
+  <small>{{ node_id }}</small>
+</div>
+<div class="row g-3 mt-3">
+  <section class="col-12 col-lg-4 mt-0">
+    <div class="row g-0 border rounded shadow-sm">
+      <div class="col-6 col-lg-12">
+        <img class="w-100" src="http://cohenwoodworking.com/wp-content/uploads/2016/09/image-placeholder-500x500.jpg">
+      </div>
+      <div class="col">
+        <div class="row g-0 h-100">
+          <div class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4">
+            <i class="bi bi-thermometer-half text-center"></i>
+            <span class="text-center">
+              <span name="node-temperature">38.23</span>&#8451;
+            </span>
+          </div>
+          <div class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4">
+            <i class="bi bi-droplet text-center"></i>
+            <span class="text-center">
+              <span name="node-moisture">4092</span>
+            </span>
+          </div>
+          <div class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4">
+            <i name="node-sprayer" class="bi bi-broadcast-pin text-center"></i>
+            <span class="text-center">Sprayer</span>
+          </div>
+          <div class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4">
+            <i name="node-sprinkler" class="bi bi-water text-center"></i>
+            <span class="text-center">Sprinkler</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="col-12 col-lg-8 mt-0">
+    <div class="h-100 border rounded shadow-sm p-3">
+      <canvas id="chart-temperature"></canvas>
+    </div>
+  </section>
+  <section class="col-12">
+    <div class="border rounded shadow-sm p-3">
+      <table id="table-temperature" class="table table-striped">
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>timestamp</th>
+            <th>data</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>123456789</td>
+            <td>abc</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
+<script src="{{url_for("static", filename="/js/services.js")}}"></script>
+<script>
+  $(document).ready(function() {
+    const labels = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+    ];
+    const data = {
+      labels: labels,
+      datasets: [{
+        label: 'My First dataset',
+        backgroundColor: 'rgb(255, 99, 132)',
+        borderColor: 'rgb(255, 99, 132)',
+        data: [0, 10, 5, 2, 20, 30, 45],
+      }]
+    };
+    const config = {
+      type: 'line',
+      data: data,
+      options: {
+        maintainAspectRatio: false
+      }
+    };
+
+    const chartTemperature = new Chart(
+      $("#chart-temperature"),
+      config
+    );
+    $('#table-temperature').DataTable();
+  });
+</script>
 {% endblock %}
