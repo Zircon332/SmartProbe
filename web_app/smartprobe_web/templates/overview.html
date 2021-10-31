@@ -82,9 +82,9 @@
     const cards = {};
     const service = new ServiceNode();
 
-    setIntervalExec(() => {
-      service.getNodesAsync((nodes) => {
-        $.each(nodes, (index, node) => {
+    setIntervalExec(function() {
+      service.getNodesAsync(function(nodes) {
+        $.each(nodes, function(index, node) {
           let card = (node["id"] in cards) ? cards[node["id"]] : new CardNode(node["id"]);
           cards[node["id"]] = card;
 

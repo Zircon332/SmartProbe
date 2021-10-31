@@ -1,6 +1,14 @@
+import decimal
+import json
 import os
 
 from flask import Flask
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return float(o)
+        return json.JSONEncoder.default(self, o)
 
 def create_app(test_config=None):
     # create and configure the app
@@ -8,6 +16,7 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
     )
+    app.json_encoder = DecimalEncoder
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
