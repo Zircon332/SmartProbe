@@ -1,4 +1,4 @@
-function setIntervalExec(callback, timeout) {
+function setIntervalExec(callback, timeout = 1000) {
   callback();
-  //setInterval(callback, timeout);
+  setInterval(callback, timeout);
 }
