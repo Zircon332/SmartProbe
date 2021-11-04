@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<nav style="--bs-breadcrumb-divider: '>';">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Nodes</a></li>
+    <li class="breadcrumb-item active"><a>{{ node_id }}</a></li>
+  </ol>
+</nav>
+<div class="row g-3">
+  <section class="col-12 col-lg-4">
+    <div class="row g-0 border rounded shadow-sm">
+      <div class="col-6 col-lg-12">
+        <img id="node-img" class="w-100" src="http://cohenwoodworking.com/wp-content/uploads/2016/09/image-placeholder-500x500.jpg">
+      </div>
+      <div class="col">
+        <div id="btns" class="row g-0 h-100">
+          <a id="btn-temperature" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
+            <i class="bi bi-thermometer-half text-center"></i>
+            <span class="text-center">
+              <span name="node-temperature">38.23</span>&#8451;
+            </span>
+          </a>
+          <a id="btn-moisture" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
+            <i class="bi bi-droplet text-center"></i>
+            <span class="text-center">
+              <span name="node-moisture">4092</span>
+            </span>
+          </a>
+          <a id="btn-sprayer" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
+            <i name="node-sprayer" class="bi bi-broadcast-pin text-center"></i>
+            <span class="text-center">Sprayer</span>
+          </a>
+          <a id="btn-sprinkler" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
+            <i name="node-sprinkler" class="bi bi-water text-center"></i>
+            <span class="text-center">Sprinkler</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="col-12 col-lg-8">
+    <div id="charts" class="h-100 border rounded shadow-sm p-3">
+      <canvas id="chart-temperature"></canvas>
+      <canvas id="chart-moisture" class="d-none"></canvas>
+      <canvas id="chart-sprayer" class="d-none"></canvas>
+      <canvas id="chart-sprinkler" class="d-none"></canvas>
+    </div>
+  </section>
+  <section class="col-12">
+    <div id="tables" class="border rounded shadow-sm p-3">
+      <table id="table-temperature" class="table table-striped">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Temperature</th>
+          </tr>
+        </thead>
+      </table>
+      <table id="table-moisture" class="table table-striped">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Moisture</th>
+          </tr>
+        </thead>
+      </table>
+      <table id="table-sprayer" class="table table-striped">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Sprayer</th>
+          </tr>
+        </thead>
+      </table>
+      <table id="table-sprinkler" class="table table-striped">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Sprinkler</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+<script src="{{url_for("static", filename="/js/services.js")}}"></script>
+<script>
+  function buildDataChart(ctx, key, title = "Title") {
+    return new Chart(
+      ctx,
+      {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: title,
+              backgroundColor: "rgb(255, 99, 132)",
+              borderColor: "rgb(255, 99, 132)",
+              parsing: {
+                yAxisKey: key
+              }
+            },
+            {
+              label: "Action",
+              backgroundColor: "rgb(132, 99, 255)",
+              borderColor: "rgb(132, 99, 255)",
+              parsing: {
+                yAxisKey: "sprinkler"
+              },
+              stepped: true,
+              yAxisID: "y2"
+            }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          parsing: {
+            xAxisKey: "timestamp",
+          },
+          scales: {
+            x: {
+              type: "time"
+            },
+            y: {
+              type: "linear",
+              position: "left",
+              stack: "demo",
+              stackWeight: 2,
+            },
+            y2: {
+              type: "category",
+              labels: ["W1", "W0"],
+              offset: true,
+              position: "left",
+              stack: "demo",
+              stackWeight: 1
+            }
+          }
+        }
+      }
+    );
+  }
+
+  function buildActionsChart(ctx, key, labels, title = "Title") {
+    return new Chart(
+      ctx,
+      {
+        type: "line",
+        data: {
+          datasets: [
+            {
+              label: "Action",
+              backgroundColor: "rgb(132, 99, 255)",
+              borderColor: "rgb(132, 99, 255)",
+              stepped: true
+            }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          parsing: {
+            xAxisKey: "timestamp",
+            yAxisKey: key
+          },
+          scales: {
+            x: {
+              type: "time"
+            },
+            y: {
+              type: "category",
+              labels: labels,
+              offset: true,
+              position: "left",
+            }
+          }
+        }
+      }
+    );
+  }
+
+  function buildTable(ctx, col) {
+    return ctx.DataTable({
+      searching: false,
+      columns: [
+        { data: "timestamp" },
+        { data: col },
+      ]
+    });
+  }
+
+  $(document).ready(function() {
+    const service = new ServiceNode();
+    const nodeId = "{{ node_id }}";
+
+    const chartTemperature = buildDataChart($("#chart-temperature"), "temperature", "Temperature");
+    const chartMoisture = buildDataChart($("#chart-moisture"), "moisture", "Moisture");
+    const chartSprayer = buildActionsChart($("#chart-sprayer"), "sprayer", ["P1", "P0"], "Temperature");
+    const chartSprinkler = buildActionsChart($("#chart-sprinkler"), "sprinkler", ["W1", "W0"], "Moisture");
+
+    const tableTemperature = buildTable($("#table-temperature"), "temperature");
+    const tableMoisture = buildTable($("#table-moisture"), "moisture");
+    const tableSprayer = buildTable($("#table-sprayer"), "sprayer");
+    const tableSprinkler = buildTable($("#table-sprinkler"), "sprinkler");
+
+    $("#tables").children().each(function(index) {
+      $(this).addClass("d-none");
+    });
+    $("#charts").children().each(function(index) {
+      $(this).addClass("d-none");
+    });
+
+    
+    setIntervalExec(function() {
+      service.getNodeDataAsync(nodeId, function(log) {
+        dataTemperature = [];
+        dataMoisture = [];
+
+        log.forEach(function(entry) {
+          dataTemperature.push({
+            timestamp: entry["timestamp"],
+            temperature: entry["data"]["temperature"]
+          });
+          dataMoisture.push({
+            timestamp: entry["timestamp"],
+            moisture: entry["data"]["moisture"]
+          });
+        });
+
+        chartTemperature.data.datasets[0].data = dataTemperature;
+        chartTemperature.update();
+
+        chartMoisture.data.datasets[0].data = dataMoisture;
+        chartMoisture.update();
+
+        tableTemperature
+          .clear()
+          .rows.add(dataTemperature)
+          .draw();
+        tableMoisture
+          .clear()
+          .rows.add(dataMoisture)
+          .draw();
+      });
+
+      service.getNodeActionsAsync(nodeId, function(log) {
+        actionsSprayer = [];
+        actionsSprinkler = [];
+
+        log.forEach(function(entry) {
+          actionsSprayer.push({
+            timestamp: entry["timestamp"],
+            sprayer: entry["data"]["sprayer"]
+          });
+          actionsSprinkler.push({
+            timestamp: entry["timestamp"],
+            sprinkler: entry["data"]["sprinkler"]
+          });
+        });
+
+        chartTemperature.data.datasets[1].data = actionsSprinkler;
+        chartTemperature.update();
+
+        chartMoisture.data.datasets[1].data = actionsSprinkler;
+        chartMoisture.update();
+
+        chartSprayer.data.datasets[0].data = actionsSprayer;
+        chartSprayer.update();
+
+        chartSprinkler.data.datasets[0].data = actionsSprinkler;
+        chartSprinkler.update();
+
+        tableSprayer
+          .clear()
+          .rows.add(actionsSprayer)
+          .draw();
+        tableSprinkler
+          .clear()
+          .rows.add(actionsSprinkler)
+          .draw();
+      });
+
+      refreshImage(
+        $("#node-img"),
+        S3_ENDPOINT + `${nodeId}.bmp`
+      )
+    }, 5000);
+
+    $("#btns").children().click(function() {
+      let attribute = $(this).attr("id").split("-")[1];
+
+      $("#btns").children().each(function(index) {
+        $(this).removeClass("shadow");
+      });
+      $(this).addClass("shadow");
+
+      $("#charts").children().each(function(index) {
+        $(this).addClass("d-none");
+
+        if ($(this).attr("id").includes(attribute)) {
+          $(this).removeClass("d-none");
+        }
+      });
+
+      $("#tables").children().each(function(index) {
+        $(this).addClass("d-none");
+
+        if ($(this).attr("id").includes(attribute)) {
+          $(this).removeClass("d-none");
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

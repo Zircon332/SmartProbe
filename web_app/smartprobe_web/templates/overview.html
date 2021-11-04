@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div id="nodes" class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+</div>
+
+<template id="template-node">
+  <div class="col">
+    <div class="card shadow-sm">
+      <img name="node-img" class="card-img-top" src="http://cohenwoodworking.com/wp-content/uploads/2016/09/image-placeholder-500x500.jpg">
+      <div class="card-body">
+        <h5 class="card-title mb-0"><a name="node-id" class="link-dark"></a></h5>
+      </div>
+      <ul class="list-group list-group-flush flex-row">
+        <li class="list-group-item border-0 w-100 d-flex flex-column">
+          <i class="bi bi-thermometer-half text-center fs-4"></i>
+          <span class="text-center">
+            <span name="node-temperature"></span>&#8451;
+          </span>
+        </li>
+        <li class="list-group-item border-0 border-end w-100 d-flex flex-column">
+          <i class="bi bi-droplet text-center fs-4"></i>
+          <span class="text-center">
+            <span name="node-moisture"></span>
+          </span>
+        </li>
+        <li class="list-group-item border-0 d-flex flex-column">
+          <i name="node-sprayer" class="bi bi-broadcast-pin text-center fs-5"></i>
+          <i name="node-sprinkler" class="bi bi-water text-center fs-5"></i>
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block script %}
+<script src="{{url_for("static", filename="/js/services.js")}}"></script>
+<script>
+  $(document).ready(function() {
+    class CardNode {
+      card;
+
+      constructor(id) {
+        let card = $("#template-node").contents().clone();
+        card.attr("id", id);
+
+        let card_node_id = card.find("[name='node-id']");
+        card_node_id.text(id);
+        card_node_id.attr("href", "/node/" + id);
+        
+        card.find("[name='node-img']")
+
+        $("#nodes").append(card);
+
+        this.card = card;
+        this.id = id;
+      }
+
+      reload() {
+        refreshImage(
+          this.card.find("[name='node-img']"),
+          S3_ENDPOINT + `${this.id}.bmp`
+        )
+      }
+
+      set temperature(value) {
+        this.card.find("[name='node-temperature']").text(value);
+      }
+
+      set moisture(value) {
+        this.card.find("[name='node-moisture']").text(value);
+      }
+
+      set sprayer(action) {
+        if (action[0] == "1") {
+          this.card.find("[name='node-sprayer']").addClass("text-success");
+        } else {
+          this.card.find("[name='node-sprayer']").removeClass("text-success");
+        }
+      }
+
+      set sprinkler(action) {
+        if (action[0] == "1") {
+          this.card.find("[name='node-sprinkler']").addClass("text-success");
+        } else {
+          this.card.find("[name='node-sprinkler']").removeClass("text-success");
+        }
+      }
+    }
+
+    const cards = {};
+    const service = new ServiceNode();
+
+    setIntervalExec(function() {
+      service.getNodesAsync(function(nodes) {
+        $.each(nodes, function(index, node) {
+          let card = (node["id"] in cards) ? cards[node["id"]] : new CardNode(node["id"]);
+          cards[node["id"]] = card;
+
+          card.temperature = node["sensors"]["temperature"];
+          card.moisture = node["sensors"]["moisture"];
+
+          card.sprayer = node["actions"]["sprayer"];
+          card.sprinkler = node["actions"]["sprinkler"];
+
+          card.reload();
+        });
+      });
+    }, 5000);
+  });
+</script>
+{% endblock %}
