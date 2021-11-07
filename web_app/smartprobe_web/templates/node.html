@@ -11,7 +11,7 @@
   <section class="col-12 col-lg-4">
     <div class="row g-0 border rounded shadow-sm">
       <div class="col-6 col-lg-12">
-        <img class="w-100" src="http://cohenwoodworking.com/wp-content/uploads/2016/09/image-placeholder-500x500.jpg">
+        <img id="node-img" class="w-100" src="http://cohenwoodworking.com/wp-content/uploads/2016/09/image-placeholder-500x500.jpg">
       </div>
       <div class="col">
         <div id="btns" class="row g-0 h-100">
@@ -216,73 +216,81 @@
       $(this).addClass("d-none");
     });
 
-    service.getNodeDataAsync(nodeId, function(log) {
-      dataTemperature = [];
-      dataMoisture = [];
+    
+    setIntervalExec(function() {
+      service.getNodeDataAsync(nodeId, function(log) {
+        dataTemperature = [];
+        dataMoisture = [];
 
-      log.forEach(function(entry) {
-        dataTemperature.push({
-          timestamp: entry["timestamp"],
-          temperature: entry["data"]["temperature"]
+        log.forEach(function(entry) {
+          dataTemperature.push({
+            timestamp: entry["timestamp"],
+            temperature: entry["data"]["temperature"]
+          });
+          dataMoisture.push({
+            timestamp: entry["timestamp"],
+            moisture: entry["data"]["moisture"]
+          });
         });
-        dataMoisture.push({
-          timestamp: entry["timestamp"],
-          moisture: entry["data"]["moisture"]
-        });
+
+        chartTemperature.data.datasets[0].data = dataTemperature;
+        chartTemperature.update();
+
+        chartMoisture.data.datasets[0].data = dataMoisture;
+        chartMoisture.update();
+
+        tableTemperature
+          .clear()
+          .rows.add(dataTemperature)
+          .draw();
+        tableMoisture
+          .clear()
+          .rows.add(dataMoisture)
+          .draw();
       });
 
-      chartTemperature.data.datasets[0].data = dataTemperature;
-      chartTemperature.update();
+      service.getNodeActionsAsync(nodeId, function(log) {
+        actionsSprayer = [];
+        actionsSprinkler = [];
 
-      chartMoisture.data.datasets[0].data = dataMoisture;
-      chartMoisture.update();
-
-      tableTemperature
-        .clear()
-        .rows.add(dataTemperature)
-        .draw();
-      tableMoisture
-        .clear()
-        .rows.add(dataMoisture)
-        .draw();
-    });
-
-    service.getNodeActionsAsync(nodeId, function(log) {
-      actionsSprayer = [];
-      actionsSprinkler = [];
-
-      log.forEach(function(entry) {
-        actionsSprayer.push({
-          timestamp: entry["timestamp"],
-          sprayer: entry["data"]["sprayer"]
+        log.forEach(function(entry) {
+          actionsSprayer.push({
+            timestamp: entry["timestamp"],
+            sprayer: entry["data"]["sprayer"]
+          });
+          actionsSprinkler.push({
+            timestamp: entry["timestamp"],
+            sprinkler: entry["data"]["sprinkler"]
+          });
         });
-        actionsSprinkler.push({
-          timestamp: entry["timestamp"],
-          sprinkler: entry["data"]["sprinkler"]
-        });
+
+        chartTemperature.data.datasets[1].data = actionsSprinkler;
+        chartTemperature.update();
+
+        chartMoisture.data.datasets[1].data = actionsSprinkler;
+        chartMoisture.update();
+
+        chartSprayer.data.datasets[0].data = actionsSprayer;
+        chartSprayer.update();
+
+        chartSprinkler.data.datasets[0].data = actionsSprinkler;
+        chartSprinkler.update();
+
+        tableSprayer
+          .clear()
+          .rows.add(actionsSprayer)
+          .draw();
+        tableSprinkler
+          .clear()
+          .rows.add(actionsSprinkler)
+          .draw();
       });
 
-      chartTemperature.data.datasets[1].data = actionsSprinkler;
-      chartTemperature.update();
-
-      chartMoisture.data.datasets[1].data = actionsSprinkler;
-      chartMoisture.update();
-
-      chartSprayer.data.datasets[0].data = actionsSprayer;
-      chartSprayer.update();
-
-      chartSprinkler.data.datasets[0].data = actionsSprinkler;
-      chartSprinkler.update();
-
-      tableSprayer
-        .clear()
-        .rows.add(actionsSprayer)
-        .draw();
-      tableSprinkler
-        .clear()
-        .rows.add(actionsSprinkler)
-        .draw();
-    });
+      refreshImage(
+        $("#node-img"),
+        S3_ENDPOINT + `${nodeId}.bmp`
+      )
+    }, 5000);
 
     $("#btns").children().click(function() {
       let attribute = $(this).attr("id").split("-")[1];

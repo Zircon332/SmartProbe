@@ -48,10 +48,20 @@
         let card_node_id = card.find("[name='node-id']");
         card_node_id.text(id);
         card_node_id.attr("href", "/node/" + id);
+        
+        card.find("[name='node-img']")
 
         $("#nodes").append(card);
 
         this.card = card;
+        this.id = id;
+      }
+
+      reload() {
+        refreshImage(
+          this.card.find("[name='node-img']"),
+          S3_ENDPOINT + `${this.id}.bmp`
+        )
       }
 
       set temperature(value) {
@@ -93,6 +103,8 @@
 
           card.sprayer = node["actions"]["sprayer"];
           card.sprinkler = node["actions"]["sprinkler"];
+
+          card.reload();
         });
       });
     }, 5000);
