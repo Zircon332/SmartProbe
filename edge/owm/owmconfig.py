@@ -1,5 +1,0 @@
-api_key = "3221af5220f2d3efe09976f8790bb57e"
-base_url = "http://api.openweathermap.org/data/2.5/onecall?"
-lat = "1"
-lon = "110"
-units = "metric"
