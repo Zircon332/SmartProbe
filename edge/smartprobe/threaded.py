@@ -180,7 +180,7 @@ class Buffer():
         return moisture, temperature, image
 
 
-class ThreadedClient(Thread):
+class ThreadedClient(threading.Thread):
     def __init__(self, socket, addr):
         self._addr = addr
         self._buffer = Buffer()
