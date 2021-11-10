@@ -6,8 +6,9 @@ from object_detection.builders import model_builder
 from PIL import Image
 import numpy as np
 
-DATASET = 'dataset'
-MODELS = 'saved_model'
+DIR = os.path.join(os.getcwd(),'pest_detection')
+DATASET = os.path.join(DIR,'dataset')
+MODELS = os.path.join(DIR,'saved_model')
 ANNOTATION = os.path.join(DATASET,'annotation')
 # CHECKPOINTS = os.path.join(MODELS,'ssd_mobnet')
 # MODEL_NAME = 'ssd_mobnet'
