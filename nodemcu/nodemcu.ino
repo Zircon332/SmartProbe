@@ -203,5 +203,5 @@ void loop() {
     delay(1000);
   }
 
-  delay(3000);
+  delay(10000);
 }
