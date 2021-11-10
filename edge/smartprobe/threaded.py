@@ -37,7 +37,9 @@ class ThreadedClient(threading.Thread):
 
             # Generate and send actuator output
             if moisture is not None and temperature is not None:
-                sprinkler = actuator.generate_sprinkler_output(moisture, temperature)
+                sprinkler = actuator.generate_sprinkler_output(moisture, temperature, 0)
+                print("M : " + str(moisture))
+                print("Sprinkler : " + sprinkler)
 
             if image is not None:
                 sprayer = actuator.generate_sprayer_output(image)
