@@ -56,6 +56,8 @@ const char* DELIMITER = "!#)%@#^#$]";
 unsigned char bmpHeader[BMP::headerSize];
 String id;
 
+unsigned long last = 0;
+
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
   WiFi.mode(WIFI_STA);
@@ -117,41 +119,44 @@ void loop() {
   float temperature = sensorTemperature.getTempCByIndex(0);
   
   camera->oneFrame();
-
-  Serial.print("ID: ");
-  Serial.println(id);
-  
-  Serial.print("Moisture: ");
-  Serial.println(moisture);
-
-  Serial.print("Temperature: ");
-  Serial.println(temperature);
   
   if (WiFi.status() == WL_CONNECTED && client.connected()) {   
-    // Send data in the format of "M123|T12.34\n"
-    client.print("I");
-    client.print(id);
+    // Only send data every 10 seconds
+    if (millis() - last > 10000) {
+      Serial.print("ID: ");
+      Serial.println(id);
+      
+      Serial.print("Moisture: ");
+      Serial.println(moisture);
+    
+      Serial.print("Temperature: ");
+      Serial.println(temperature);
+      
+      // Send data in the format of "M123|T12.34\n"
+      client.print("I");
+      client.print(id);
+  
+      client.print(DELIMITER);
+      
+      client.print("M");
+      client.print(moisture);
+      
+      client.print(DELIMITER);
+      
+      client.print("T");
+      client.print(temperature);
+      
+      client.print(DELIMITER);
+      
+      client.print("C");
+      client.write(bmpHeader, BMP::headerSize);
+      client.write(camera->frame, camera->xres * camera->yres * 2);
+      
+      client.println("");
 
-    client.print(DELIMITER);
+      last = millis();
+    }
     
-    client.print("M");
-    client.print(moisture);
-    
-    client.print(DELIMITER);
-    
-    client.print("T");
-    client.print(temperature);
-    
-    client.print(DELIMITER);
-    
-    client.print("C");
-    client.write(bmpHeader, BMP::headerSize);
-    client.write(camera->frame, camera->xres * camera->yres * 2);
-    
-    client.println("");
-
-    delay(1000); // Wait a little bit for response
-
     while (client.available()) { // Loop through everything before next iteration
       uint8_t identifier[1] = {0};
       client.read(identifier, 1);
@@ -202,6 +207,4 @@ void loop() {
     connectToServer();
     delay(1000);
   }
-
-  delay(10000);
 }
