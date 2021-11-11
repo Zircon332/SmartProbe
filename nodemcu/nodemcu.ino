@@ -113,16 +113,17 @@ void setup() {
 }
 
 void loop() {
-  // Read sensor values
-  int moisture = analogRead(MOISTURE_PIN);
-  sensorTemperature.requestTemperatures();
-  float temperature = sensorTemperature.getTempCByIndex(0);
-  
-  camera->oneFrame();
-  
   if (WiFi.status() == WL_CONNECTED && client.connected()) {   
     // Only send data every 10 seconds
     if (millis() - last > 10000) {
+      // Read sensor values
+      int moisture = analogRead(MOISTURE_PIN);
+      sensorTemperature.requestTemperatures();
+      float temperature = sensorTemperature.getTempCByIndex(0);
+      
+      camera->oneFrame();
+
+      // Serial print for debugging
       Serial.print("ID: ");
       Serial.println(id);
       
@@ -132,7 +133,7 @@ void loop() {
       Serial.print("Temperature: ");
       Serial.println(temperature);
       
-      // Send data in the format of "M123|T12.34\n"
+      // Send data in the format of "Iabc123|M123|T12.34|Cbytes\n"
       client.print("I");
       client.print(id);
   
