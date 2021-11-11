@@ -13,7 +13,9 @@ class ThreadedClient(threading.Thread):
         self._mqtt_conn = mqtt_conn
         self._socket = socket
         self._stop_flag = False
-
+        
+        self._sprinkler_state = 0
+        
         threading.Thread.__init__(self)
 
     def run(self):
@@ -37,9 +39,8 @@ class ThreadedClient(threading.Thread):
 
             # Generate and send actuator output
             if moisture is not None and temperature is not None:
-                sprinkler = actuator.generate_sprinkler_output(moisture, temperature, 0)
-                print("M : " + str(moisture))
-                print("Sprinkler : " + sprinkler)
+                sprinkler = actuator.generate_sprinkler_output(moisture, temperature, self._sprinkler_state)
+                self._sprinkler_state == int(sprinkler[1])
 
             if image is not None:
                 sprayer = actuator.generate_sprayer_output(image)
