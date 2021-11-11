@@ -59,13 +59,18 @@ def generate_sprayer_output(image):
 #         return "P1"
 #     else:
 #         return "P0"
-    frame = Image.open(io.BytesIO(image))
-    if(model.detect(frame)):
-        print("Pest Detected, Activating Pest Sprayer")
-        return "P1"
-    else:
-        print("No Pest Detected for now")
+    try:
+        frame = Image.open(io.BytesIO(image))
+    except OSError:
+        print("bad image!")
         return "P0"
+    else:
+        if(model.detect(frame)):
+            print("Pest Detected, Activating Pest Sprayer")
+            return "P1"
+        else:
+            print("No Pest Detected for now")
+            return "P0"
 
 if __name__ == "__main__":
     model = Pest_Detector()
