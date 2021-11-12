@@ -75,4 +75,8 @@ def getnextrain():
                 "hour": hr
             }
             return forecast
-    return 0
+        
+        forecast = {
+            "hour": 21
+        }
+    return forecast
