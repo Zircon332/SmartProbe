@@ -15,24 +15,24 @@
       </div>
       <div class="col">
         <div id="btns" class="row g-0 h-100">
-          <a id="btn-temperature" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
+          <a style="color: black;" id="btn-temperature" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none" role="button">
             <i class="bi bi-thermometer-half text-center"></i>
             <span class="text-center">
-              <span name="node-temperature">38.23</span>&#8451;
+              <span id="node-temperature">0</span>&#8451;
             </span>
           </a>
-          <a id="btn-moisture" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
+          <a style="color: black;" id="btn-moisture" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none" role="button">
             <i class="bi bi-droplet text-center"></i>
             <span class="text-center">
-              <span name="node-moisture">4092</span>
+              <span id="node-moisture">0</span>
             </span>
           </a>
-          <a id="btn-sprayer" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
-            <i name="node-sprayer" class="bi bi-broadcast-pin text-center"></i>
+          <a style="color: black;" id="btn-sprayer" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none" role="button">
+            <i id="node-sprayer" class="bi bi-broadcast-pin text-center"></i>
             <span class="text-center">Sprayer</span>
           </a>
-          <a id="btn-sprinkler" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none text-dark" role="button">
-            <i name="node-sprinkler" class="bi bi-water text-center"></i>
+          <a style="color: black;" id="btn-sprinkler" class="col-6 col-lg-3 d-flex flex-column justify-content-center py-lg-3 py-xl-4 text-decoration-none" role="button">
+            <i id="node-sprinkler" class="bi bi-water text-center"></i>
             <span class="text-center">Sprinkler</span>
           </a>
         </div>
@@ -216,9 +216,25 @@
     $("#charts").children().each(function(index) {
       $(this).addClass("d-none");
     });
-
     
     setIntervalExec(function() {
+      service.getNodeAsync(nodeId, function(node) {
+        $("#node-temperature").text(node["sensors"]["temperature"]);
+        $("#node-moisture").text(node["sensors"]["moisture"]);
+
+        if (node["actions"]["sprayer"] == "P1") {
+          $("#btn-sprayer").addClass("text-success");
+        } else {
+          $("#btn-sprayer").removeClass("text-success");
+        }
+
+        if (node["actions"]["sprinkler"] == "W1") {
+          $("#btn-sprinkler").addClass("text-success");
+        } else {
+          $("#btn-sprinkler").removeClass("text-success");
+        }
+      });
+
       service.getNodeDataAsync(nodeId, function(log) {
         dataTemperature = [];
         dataMoisture = [];
