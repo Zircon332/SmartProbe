@@ -188,6 +188,7 @@
   function buildTable(ctx, col) {
     return ctx.DataTable({
       searching: false,
+      order: [[ 0, "desc" ]],
       columns: [
         { data: "timestamp" },
         { data: col },
@@ -233,10 +234,10 @@
           });
         });
 
-        chartTemperature.data.datasets[0].data = dataTemperature;
+        chartTemperature.data.datasets[0].data = dataTemperature.slice(0, 51);
         chartTemperature.update();
 
-        chartMoisture.data.datasets[0].data = dataMoisture;
+        chartMoisture.data.datasets[0].data = dataMoisture.slice(0, 51);
         chartMoisture.update();
 
         tableTemperature
@@ -264,16 +265,16 @@
           });
         });
 
-        chartTemperature.data.datasets[1].data = actionsSprinkler;
+        chartTemperature.data.datasets[1].data = actionsSprinkler.slice(0, 51);
         chartTemperature.update();
 
-        chartMoisture.data.datasets[1].data = actionsSprinkler;
+        chartMoisture.data.datasets[1].data = actionsSprinkler.slice(0, 51);
         chartMoisture.update();
 
-        chartSprayer.data.datasets[0].data = actionsSprayer;
+        chartSprayer.data.datasets[0].data = actionsSprayer.slice(0, 51);
         chartSprayer.update();
 
-        chartSprinkler.data.datasets[0].data = actionsSprinkler;
+        chartSprinkler.data.datasets[0].data = actionsSprinkler.slice(0, 51);
         chartSprinkler.update();
 
         tableSprayer

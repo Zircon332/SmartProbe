@@ -73,7 +73,7 @@
       }
 
       set sprayer(action) {
-        if (action[0] == "1") {
+        if (action == "P1") {
           this.card.find("[name='node-sprayer']").addClass("text-success");
         } else {
           this.card.find("[name='node-sprayer']").removeClass("text-success");
@@ -81,7 +81,8 @@
       }
 
       set sprinkler(action) {
-        if (action[0] == "1") {
+        console.log(action);
+        if (action == "W1") {
           this.card.find("[name='node-sprinkler']").addClass("text-success");
         } else {
           this.card.find("[name='node-sprinkler']").removeClass("text-success");
