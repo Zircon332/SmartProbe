@@ -15,8 +15,11 @@ def get_nodes():
 
     # Deserialize because values are saved as string in DynamoDB for some reason
     for item in res["Items"]:
-        item["sensors"] = json.loads(item["sensors"])
-        item["actions"] = json.loads(item["actions"])
+        if type(item["sensors"]) is str:
+            item["sensors"] = json.loads(item["sensors"])
+
+        if type(item["actions"]) is str:
+            item["actions"] = json.loads(item["actions"])
 
     return jsonify(res["Items"])
 
@@ -31,8 +34,11 @@ def get_node(node_id):
 
     # Deserialize because values are saved as string in DynamoDB for some reason
     item = res["Item"]
-    item["sensors"] = json.loads(item["sensors"])
-    item["actions"] = json.loads(item["actions"])
+    if type(item["sensors"]) is str:
+        item["sensors"] = json.loads(item["sensors"])
+
+    if type(item["actions"]) is str:
+        item["actions"] = json.loads(item["actions"])
 
     return item
 
