@@ -74,6 +74,8 @@ void connectToWiFi() {
     Serial.println(" Failed!");
   } else {
     Serial.println(" Connected!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
   }
 }
 

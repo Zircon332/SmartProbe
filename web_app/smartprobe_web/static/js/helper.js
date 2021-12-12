@@ -1,4 +1,4 @@
-const S3_ENDPOINT = "https://smartprobe.s3.ap-southeast-1.amazonaws.com/";
+const S3_ENDPOINT = "https://smartprobe-bucket.s3.ap-southeast-1.amazonaws.com/";
 
 function setIntervalExec(callback, timeout = 1000) {
   callback();

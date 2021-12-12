@@ -8,7 +8,7 @@ bp = Blueprint("api", __name__, url_prefix="/api/node")
 
 @bp.route("/")
 def get_nodes():
-    table_nodes = boto3.resource("dynamodb").Table("nodes")
+    table_nodes = boto3.resource("dynamodb").Table("SmartProbeNodes")
 
     # Retrieve all items in "nodes" table
     res = table_nodes.scan()
@@ -22,7 +22,7 @@ def get_nodes():
 
 @bp.route("/<node_id>")
 def get_node(node_id):
-    table_nodes = boto3.resource("dynamodb").Table("nodes")
+    table_nodes = boto3.resource("dynamodb").Table("SmartProbeNodes")
 
     res = table_nodes.get_item(Key={ "id": node_id })
 
@@ -38,7 +38,7 @@ def get_node(node_id):
 
 @bp.route("/<node_id>/data")
 def get_node_data(node_id):
-    table_data = boto3.resource("dynamodb").Table("sensors_data")
+    table_data = boto3.resource("dynamodb").Table("SmartProbeSensorsData")
 
     res = table_data.query(
         ScanIndexForward=False,
@@ -48,7 +48,7 @@ def get_node_data(node_id):
 
 @bp.route("/<node_id>/actions")
 def get_node_actions(node_id):
-    table_data = boto3.resource("dynamodb").Table("actions")
+    table_data = boto3.resource("dynamodb").Table("SmartProbeActions")
 
     res = table_data.query(
         ScanIndexForward=False,
