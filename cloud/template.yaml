@@ -1,0 +1,280 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  # ---=== IAM ===---
+  RoleForIoTRule:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "iot.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "SmartProbePolicyForDynamoDBWriteAccess"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:PutItem"
+                  - "dynamodb:UpdateItem"
+                Resource:
+                  - !GetAtt TableActions.Arn
+                  - !GetAtt TableNodes.Arn
+                  - !GetAtt TableSensorsData.Arn
+      RoleName: "SmartProbeRoleForIoTRule"
+
+  RoleForEC2:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "SmartProbePolicyForDynamoDBReadOnlyAccess"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:GetItem"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                Resource:
+                  - !GetAtt TableActions.Arn
+                  - !GetAtt TableNodes.Arn
+                  - !GetAtt TableSensorsData.Arn
+      RoleName: "SmartProbeRoleForWebServer"
+
+  InstanceProfileForEC2:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      InstanceProfileName: "SmartProbeRoleForWebServer"
+      Roles:
+        - !Ref RoleForEC2
+
+  # ---=== DynamoDB ===---
+  TableActions:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "id"
+          AttributeType: "S"
+        - AttributeName: "timestamp"
+          AttributeType: "N"
+      BillingMode: "PAY_PER_REQUEST"
+      KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"
+        - AttributeName: "timestamp"
+          KeyType: "RANGE"
+      TableName: "SmartProbeActions"
+
+  TableNodes:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "id"
+          AttributeType: "S"
+      BillingMode: "PAY_PER_REQUEST"
+      KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"
+      TableName: "SmartProbeNodes"
+
+  TableSensorsData:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "id"
+          AttributeType: "S"
+        - AttributeName: "timestamp"
+          AttributeType: "N"
+      BillingMode: "PAY_PER_REQUEST"
+      KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"
+        - AttributeName: "timestamp"
+          KeyType: "RANGE"
+      TableName: "SmartProbeSensorsData"
+
+  # ---=== S3 ===---
+  Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "smartprobe-bucket"
+
+  BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "s3:GetObject"
+            Effect: "Allow"
+            Principal: "*"
+            Resource: !Join
+              - ''
+              - - !GetAtt Bucket.Arn
+                - "/*"
+
+  # ---=== IoT Core ===---
+  PolicyForThing:
+    Type: "AWS::IoT::Policy"
+    Properties: 
+      PolicyName: "SmartProbePolicyForThing"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Action: "iot:Connect"
+          Resource: "*"
+        - Effect: "Allow"
+          Action: "iot:Publish"
+          Resource:
+            - !Join
+              - ""
+              - - "arn:aws:iot:"
+                - !Ref AWS::Region
+                - ":"
+                - !Ref AWS::AccountId
+                - ":topic/smartprobe/*/actions"
+            - !Join
+              - ""
+              - - "arn:aws:iot:"
+                - !Ref AWS::Region
+                - ":"
+                - !Ref AWS::AccountId
+                - ":topic/smartprobe/*/sensors/data"
+
+  RuleForActions:
+    Type: "AWS::IoT::TopicRule"
+    Properties: 
+      RuleName: "SmartProbeRuleForActions"
+      TopicRulePayload:
+        Actions:
+          - DynamoDB:
+              HashKeyField: "id"
+              HashKeyType: "STRING"
+              HashKeyValue: "${topic(2)}"
+              PayloadField: "data"
+              RangeKeyField: "timestamp"
+              RangeKeyType: "NUMBER"
+              RangeKeyValue: "${timestamp()}"
+              RoleArn: !GetAtt RoleForIoTRule.Arn
+              TableName: !Ref TableActions
+          - DynamoDB:
+              HashKeyField: "id"
+              HashKeyType: "STRING"
+              HashKeyValue: "${topic(2)}"
+              PayloadField: "actions"
+              RoleArn: !GetAtt RoleForIoTRule.Arn
+              TableName: !Ref TableNodes
+        Sql: "SELECT * FROM 'smartprobe/+/actions'"
+
+  RuleForSensorsData:
+    Type: "AWS::IoT::TopicRule"
+    Properties: 
+      RuleName: "SmartProbeRuleForSensorsData"
+      TopicRulePayload:
+        Actions:
+          - DynamoDB:
+              HashKeyField: "id"
+              HashKeyType: "STRING"
+              HashKeyValue: "${topic(2)}"
+              PayloadField: "data"
+              RangeKeyField: "timestamp"
+              RangeKeyType: "NUMBER"
+              RangeKeyValue: "${timestamp()}"
+              RoleArn: !GetAtt RoleForIoTRule.Arn
+              TableName: !Ref TableSensorsData
+          - DynamoDB:
+              HashKeyField: "id"
+              HashKeyType: "STRING"
+              HashKeyValue: "${topic(2)}"
+              PayloadField: "sensors"
+              RoleArn: !GetAtt RoleForIoTRule.Arn
+              TableName: !Ref TableNodes
+        Sql: "SELECT * FROM 'smartprobe/+/sensors/data'"
+
+  # ---=== EC2 ===---
+  SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties: 
+      GroupDescription: "Public access to SmartProbe website served from port 5000."
+      GroupName: "SmartProbeSecurityGroupForEC2"
+      SecurityGroupIngress: 
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfileForEC2
+      ImageId: "ami-0dc5785603ad4ff54"
+      InstanceType: "t2.micro"
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "SmartProbeWebServer"
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            cd /home/ec2-user
+
+            yum update -y
+            amazon-linux-extras enable nginx1
+            yum install git nginx -y
+
+            git clone https://github.com/Zircon332/SmartProbe.git
+
+            python3 -m venv venv
+            source venv/bin/activate
+            python3 -m pip install -r SmartProbe/web_app/requirements.txt
+            deactivate
+
+            mv SmartProbe/web_app/ ./www
+            rm -fr SmartProbe
+
+            tee /etc/systemd/system/flask-app.service > /dev/null <<EOT
+            [Unit]
+            Description=SmartProbe Flask App
+
+            [Service]
+            Type=simple
+            Environment="AWS_DEFAULT_REGION=${AWS::Region}"
+            ExecStart=/home/ec2-user/venv/bin/gunicorn --chdir /home/ec2-user/www/ server:app
+            Restart=on-failure
+
+            [Install]
+            WantedBy=multi-user.target
+            EOT
+            systemctl start flask-app
+            systemctl enable flask-app
+
+            tee /etc/nginx/default.d/flask-app.conf > /dev/null <<EOT
+            location / {
+                proxy_pass         http://127.0.0.1:8000/;
+                proxy_redirect     off;
+
+                proxy_set_header   Host                 \$host;
+                proxy_set_header   X-Real-IP            \$remote_addr;
+                proxy_set_header   X-Forwarded-For      \$proxy_add_x_forwarded_for;
+                proxy_set_header   X-Forwarded-Proto    \$scheme;
+            }
+            EOT
+            systemctl start nginx
+            systemctl enable nginx
+
+            systemctl daemon-reload
