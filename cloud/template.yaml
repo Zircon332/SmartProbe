@@ -26,7 +26,7 @@ Resources:
                   - !GetAtt TableSensorsData.Arn
       RoleName: "SmartProbeRoleForIoTRule"
 
-  RoleForEC2:
+  RoleForWebServer:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -52,12 +52,28 @@ Resources:
                   - !GetAtt TableSensorsData.Arn
       RoleName: "SmartProbeRoleForWebServer"
 
-  InstanceProfileForEC2:
+  InstanceProfileForWebServer:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
       InstanceProfileName: "SmartProbeRoleForWebServer"
       Roles:
-        - !Ref RoleForEC2
+        - !Ref RoleForWebServer
+
+  UserForNode:
+    Type: "AWS::IAM::User"
+    Properties: 
+      Policies: 
+        - PolicyName: "SmartProbePolicyForS3WriteAccess"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action: "s3:PutObject"
+                Effect: "Allow"
+                Resource: !Join
+                  - ""
+                  - - !GetAtt Bucket.Arn
+                    - "/*"
+      UserName: "SmartProbeNode"
 
   # ---=== DynamoDB ===---
   TableActions:
@@ -126,10 +142,10 @@ Resources:
                 - "/*"
 
   # ---=== IoT Core ===---
-  PolicyForThing:
+  PolicyForNode:
     Type: "AWS::IoT::Policy"
     Properties: 
-      PolicyName: "SmartProbePolicyForThing"
+      PolicyName: "SmartProbePolicyForPubAccess"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -208,18 +224,18 @@ Resources:
   SecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties: 
-      GroupDescription: "Public access to SmartProbe website served from port 5000."
-      GroupName: "SmartProbeSecurityGroupForEC2"
+      GroupDescription: "Public access to SmartProbe website served from port 80."
+      GroupName: "SmartProbeSecurityGroupForWebServer"
       SecurityGroupIngress: 
         - CidrIp: "0.0.0.0/0"
           FromPort: 80
           IpProtocol: "tcp"
           ToPort: 80
 
-  EC2Instance:
+  WebServerInstance:
     Type: "AWS::EC2::Instance"
     Properties:
-      IamInstanceProfile: !Ref InstanceProfileForEC2
+      IamInstanceProfile: !Ref InstanceProfileForWebServer
       ImageId: "ami-0dc5785603ad4ff54"
       InstanceType: "t2.micro"
       SecurityGroups:
